@@ -801,3 +801,48 @@ export default function DashboardPage() {
 ```
 
 ```
+
+# <font color=Orange> Knowledge </font>
+
+## /dashboard/page.tsx && DashboardPage.tsx
+
+คุณคิดว่าที่ใช้ทั้ง dashboard/page.tsx
+// Dashboard route file — re‑exports the actual DashboardPage component
+import DashboardPage from "@/components/pages/DashboardPage";
+export default DashboardPage;
+
+กับ /components/pages/DashboardPage.tsx
+
+// DashboardPage — 1️⃣ wraps content in MainLayout 2️⃣ renders MemoryContainer
+import MainLayout from "@/components/layouts/MainLayout";
+import MemoryContainer from "@/components/containers/MemoryContainer";
+
+export default function DashboardPage() {
+return (
+<MainLayout>
+<MemoryContainer />
+</MainLayout>
+);
+}
+
+มันซ้ำซ้อนกันมั้ยครับ หรือถ้าระยะยาวโปรเจ็คใหญ่ขึ้นการวาง structure นี้จะดีกว่า
+
+```
+สั้น ๆ คือ “ไม่จำเป็น แต่มีประโยชน์ในโปรเจ็กต์ใหญ่” ครับ
+
+ถ้าเอาแบบเร็ว‑สุด ๆ คุณเขียนโค้ดทั้งหมดลงใน `app/dashboard/page.tsx` เลยก็ใช้งานได้เหมือนกัน ไม่มีปัญหาเรื่อง performance เพราะ Next.js จะ bundle ให้เหมือนเดิม ต่างกันแค่ชั้น import หนึ่งชั้นเท่านั้น
+
+แต่เมื่อมองในระยะยาว โฟลเดอร์ `/app` ทำหน้าที่เป็น **ตัวกำหนด routing และการทำงานฝั่งเซิร์ฟเวอร์** (เช่น `generateMetadata`, `generateStaticParams`, หรือโหลดข้อมูลจาก DB) ส่วนโฟลเดอร์ `/components/pages` เก็บ **UI เพียว ๆ** ที่คุณสามารถ
+
+* ทดสอบด้วย React‑Testing‑Library ได้โดยไม่ต้องบู๊ต Next.js
+* ใส่ Storybook snapshot เพื่อให้ดีไซน์รีวิวได้
+* รี‑ใช้ในเส้นทางอื่น ๆ หรือสร้าง preview ในแอดมินโดยไม่ต้องอ้อม route จริง
+* ปรับเปลี่ยนเส้นทาง URL ในอนาคตได้ง่าย (ย้ายไฟล์ route อย่างเดียว ไม่แตะ UI)
+
+นึกเทียบกับการเขียนโค้ดปกติคือคุณแยกไฟล์ index.ts ออกมา re‑export functions ภายใน library — มันเพิ่มบรรทัด import หนึ่งบรรทัด แต่ลด coupling และทำให้ package ดูสะอาดขึ้น เหมือนกันเลยในกรณีนี้
+
+หากวันหนึ่งคุณต้องใช้ Server Component เพื่อ fetch data แล้วส่ง prop เข้าหน้า Dashboard ซึ่งเป็น Client Component คุณแค่เขียน logic นั้นใน `app/dashboard/page.tsx` แล้วส่งผลไปให้ `<DashboardPage>` โดยที่ตัว DashboardPage ยังคง “บริสุทธิ์” (ไม่มี async/DB logic ปน) สิ่งนี้ช่วยให้คุณเลือกแบ่งขอบเขต Server vs Client ได้ยืดหยุ่นขึ้นโดยไม่ต้องยกเครื่อง UI
+
+สรุป — ถ้าตอนนี้โปรเจ็กต์ยังเล็ก คุณจะลบไฟล์ `components/pages/DashboardPage.tsx` แล้วโยนทุกอย่างไว้ใน page.tsx ก็ได้  แต่ถ้าคุณตั้งใจขยายฟีเจอร์หลายตัว, ต้องเขียนเทสต์/Storybook, หรือคาดว่าจะมีการรีไฟล์ URL บ่อย การแบ่งสองไฟล์อย่างที่ทำอยู่จะ “จ่ายค่า overhead 1 import” แลกกับโครงสร้างที่ดูแลง่ายกว่ามากครับ
+
+```
