@@ -1,3 +1,303 @@
+# <font color=orange> PROMPT!!! </font>
+
+ผลลัพธ์ที่ดี เป็น Checkpoint ล่าสุด นี่คือผลลัพธ์ที่คาดหวังก่อนที่จะ 1st propmt ให้ Agent ต้องเตรียมให้ได้ก่อน ว่าโครงสร้างยังไง แต่ละจุดทำงานร่วมกันยังไง
+
+---
+
+<!-- --- -->
+<!-- <!-- -->
+<!--  -->
+
+Here’s a **concise blueprint** you can drop straight into your Next 13+/App-Router project. I’m matching your CBA style (Containers ► Features ► UI) and only adding the bits needed for the Memory-Box mini-exercise.
+
+```
+/app
+  page.tsx                  # “Hello World test”
+  /dashboard
+    page.tsx                # ← imports DashboardPage
+
+/components
+  /containers
+    MemoryContainer.tsx     # 🧠 holds state & logic
+  /features
+    /memory
+      MemoryInput.tsx       # form + buttons
+      MemoryList.tsx        # list renderer
+      index.ts              # re-export
+  /ui
+    Button.tsx
+    Input.tsx
+    Card.tsx
+    index.ts
+	/pages
+		DashboardPage.tsx
+/styles
+  globals.css
+  theme.ts
+
+```
+
+##Don't forget to leave a short comment above the first line that must be a comment that tells what the function of this component is. Every component!!
+
+---
+
+### Install deps
+
+```bash
+npm i uuid
+
+```
+
+> Heads-up 💡 the project on Node 18+, you can swap uuid() with crypto.randomUUID()—no package needed.
+
+## 1 Root
+
+### /app/page.tsx
+
+```tsx
+// HomePage — root route displaying a "Hello World" test heading
+export default function Home() {
+  return <h1>Hello World test</h1>;
+}
+```
+
+### /app/dashboard/page.tsx
+
+```tsx
+// Dashboard route file — re‑exports the actual DashboardPage component\\import DashboardPage from './DashboardPage';
+export default DashboardPage;
+```
+
+---
+
+## 2 Page
+
+### /component/page/DashboardPage.tsx
+
+```tsx
+// DashboardPage — 1️⃣ wraps content in MainLayout 2️⃣ renders MemoryContainer
+import MainLayout from "@/components/layouts/MainLayout";
+import MemoryContainer from "@/components/containers/MemoryContainer";
+
+export default function DashboardPage() {
+  return (
+    <MainLayout>
+      <MemoryContainer />
+    </MainLayout>
+  );
+}
+```
+
+## 3 Containers layer (stateful)
+
+/components/containers/MemoryContainer.tsx
+
+```tsx
+// MemoryContainer — 1️⃣ holds memory state 2️⃣ handles save/clear logic 3️⃣ passes props to MemoryInput & MemoryList
+"use client";
+
+import { useState, useRef } from "react";
+import { v4 as uuid } from "uuid";
+import { Memory } from "@/components/features/memory";
+import { MemoryInput, MemoryList } from "@/components/features/memory";
+
+export default function MemoryContainer() {
+  const [memories, setMemories] = useState<Memory[]>([]);
+  const draftRef = useRef<HTMLInputElement>(null);
+
+  const saveMemory = () => {
+    const content = draftRef.current?.value.trim();
+    if (!content) return;
+
+    const createdAt = new Date()
+      .toLocaleString("sv-SE", { hour12: false }) // yyyy-mm-dd HH:MM:SS
+      .replace(" ", " : ");
+
+    setMemories((prev) => [...prev, { id: uuid(), content, createdAt }]);
+    if (draftRef.current) draftRef.current.value = "";
+  };
+
+  const clearAll = () => setMemories([]);
+
+  return (
+    <>
+      <MemoryInput draftRef={draftRef} onSave={saveMemory} onClear={clearAll} />
+      <MemoryList memories={memories} />
+    </>
+  );
+}
+```
+
+_Why `useRef`?_ — The input’s **current value** lives outside React’s render cycle until you decide to “commit” it; this avoids extra re-renders while typing.
+
+---
+
+## 4 Feature layer (presentational)
+
+/components/features/memory/MemoryInput.tsx
+
+```tsx
+// MemoryInput — 1️⃣ displays input via ref 2️⃣ Save/Clear buttons trigger callbacks 3️⃣ stateless presentational component
+"use client";
+
+import { RefObject } from "react";
+import { Button, Input } from "@/components/ui";
+
+interface Props {
+  draftRef: RefObject<HTMLInputElement>;
+  onSave: () => void;
+  onClear: () => void;
+}
+
+export default function MemoryInput({ draftRef, onSave, onClear }: Props) {
+  return (
+    <div className="flex gap-2 mb-4">
+      <Input ref={draftRef} placeholder="Type a memory…" />
+      <Button onClick={onSave}>Save</Button>
+      <Button variant="secondary" onClick={onClear}>
+        Clear All
+      </Button>
+    </div>
+  );
+}
+```
+
+### **/components/features/memory/MemoryList.tsx**
+
+```tsx
+// MemoryList — 1️⃣ receives memory array 2️⃣ renders list 3️⃣ stateless & side‑effect free
+import { Memory } from "@/components/features/memory";
+import { Card } from "@/components/ui";
+
+export default function MemoryList({ memories }: { memories: Memory[] }) {
+  if (!memories.length) return <p className="italic">No memories yet…</p>;
+
+  return (
+    <ul className="space-y-2">
+      {memories.map((m) => (
+        <Card as="li" key={m.id}>
+          <p className="font-medium">{m.content}</p>
+          <small className="text-xs text-gray-500">{m.createdAt}</small>
+        </Card>
+      ))}
+    </ul>
+  );
+}
+```
+
+### /components/features/memory/index.ts
+
+```
+// memory index — 1️⃣ exports Memory type 2️⃣ re‑exports MemoryInput & MemoryList
+export interface Memory {
+  id: string;
+  content: string;
+  createdAt: string;
+}
+
+export { default as MemoryInput } from './MemoryInput';
+export { default as MemoryList } from './MemoryList';
+
+```
+
+---
+
+## 5 UI layer (atoms)
+
+Keep your existing primitives or something like:
+
+### /components/ui/Button.tsx
+
+```tsx
+// Button — 1️⃣ reusable atom 2️⃣ supports primary|secondary variants 3️⃣ forwards native HTML button props
+"use client";
+
+export default function Button({
+  children,
+  variant = "primary",
+  ...rest
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "primary" | "secondary";
+}) {
+  const base = "px-3 py-1 rounded";
+  const styles =
+    variant === "secondary"
+      ? "border border-gray-300"
+      : "bg-blue-600 text-white";
+
+  return (
+    <button className={`${base} ${styles}`} {...rest}>
+      {children}
+    </button>
+  );
+}
+```
+
+(similar pattern for `Input` and `Card`).
+
+### /components/ui/Input.tsx
+
+```tsx
+// Input — 1️⃣ basic text input atom 2️⃣ forwards props & ref 3️⃣ simple styling
+"use client";
+
+import { forwardRef } from "react";
+
+const Input = forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(function Input(props, ref) {
+  return (
+    <input ref={ref} className="border rounded px-3 py-2 flex-1" {...props} />
+  );
+});
+
+export default Input;
+```
+
+### /components/ui/Card.tsx
+
+```tsx
+// Card — 1️⃣ container wrapper 2️⃣ polymorphic via "as" prop 3️⃣ simple styling
+"use client";
+
+import { ElementType } from "react";
+
+interface Props extends React.HTMLAttributes<HTMLElement> {
+  as?: ElementType;
+}
+
+export default function Card({
+  as: Component = "div",
+  className = "",
+  ...rest
+}: Props) {
+  return <Component className={`border p-3 rounded ${className}`} {...rest} />;
+}
+```
+
+### /components/ui/index.ts
+
+```
+// ui index — re‑exports UI atoms in one line
+export { default as Button } from './Button';
+export { default as Input } from './Input';
+export { default as Card } from './Card';
+
+```
+
+---
+
+---
+
+> 💡 Next idea: add persistence (LocalStorage, IndexedDB, or a backend) by placing the effect in MemoryContainer so stateful logic stays at the container level.
+
+###########################################################################################################
+###########################################################################################################
+###########################################################################################################
+###########################################################################################################
+###########################################################################################################
+
 # <font color=orange> Prompt เริมต้น Reuse ได้ </font>
 
 ```
@@ -54,6 +354,8 @@ Step-by-step Challenge
 5. มีปุ่ม Save (เรียกฟังก์ชัน saveMemory()) และ Clear (ล้างทั้งหมด)
 6. กำหนด type Memory = { id: string; content: string }
 7. แสดงผลลัพธ์ใน MemoryList.tsx ที่รับ props memories
+
+### โดย Flow
 
 ```
 
@@ -155,6 +457,346 @@ There are two scenarios:
     <MemoryContainer />
   </MainLayout>
   ```
+
+```
+
+```
+
+###############################################################################################################################################################
+
+# <font color=orange> Prompt </font>
+
+Here’s a **concise blueprint** you can drop straight into your Next 13+/App-Router project. I’m matching your CBA style (Containers ► Features ► UI) and only adding the bits needed for the Memory-Box mini-exercise.
+
+```
+/app
+  page.tsx                  # “Hello World test”
+  /dashboard
+    page.tsx                # ← imports DashboardPage
+
+/components
+  /containers
+    MemoryContainer.tsx     # 🧠 holds state & logic
+  /features
+    /memory
+      MemoryInput.tsx       # form + buttons
+      MemoryList.tsx        # list renderer
+      index.ts              # re-export (optional)
+  /ui
+    Button.tsx
+    Input.tsx
+    Card.tsx
+    index.ts
+	/pages
+		DashboardPage.tsx
+/styles
+  globals.css
+  theme.ts
+
+```
+
+---
+
+## 1 Containers layer (stateful)
+
+```tsx
+// components/containers/MemoryContainer.tsx
+"use client";
+
+import { useState, useRef } from "react";
+import { v4 as uuid } from "uuid";
+import MemoryInput from "@/components/features/memory/MemoryInput";
+import MemoryList from "@/components/features/memory/MemoryList";
+
+export type Memory = { id: string; content: string; createdAt: string };
+
+export default function MemoryContainer() {
+  const [memories, setMemories] = useState<Memory[]>([]);
+  const draftRef = useRef<HTMLInputElement>(null);
+
+  const saveMemory = () => {
+    const content = draftRef.current?.value.trim();
+    if (!content) return;
+
+    const now = new Date();
+    const createdAt = now
+      .toLocaleString("sv-SE", { hour12: false }) // yyyy-mm-dd HH:MM:SS
+      .replace(" ", " : ");
+    setMemories((prev) => [...prev, { id: uuid(), content, createdAt }]);
+    draftRef.current!.value = ""; // clear the input
+  };
+
+  const clearAll = () => setMemories([]);
+
+  return (
+    <>
+      <MemoryInput draftRef={draftRef} onSave={saveMemory} onClear={clearAll} />
+      <MemoryList memories={memories} />
+    </>
+  );
+}
+```
+
+_Why `useRef`?_ — The input’s **current value** lives outside React’s render cycle until you decide to “commit” it; this avoids extra re-renders while typing.
+
+---
+
+## 2 Feature layer (presentational)
+
+### `MemoryInput`
+
+```tsx
+// components/features/memory/MemoryInput.tsx
+"use client";
+
+import React, { RefObject } from "react";
+import { Button, Input } from "@/components/ui";
+
+interface Props {
+  draftRef: RefObject<HTMLInputElement>;
+  onSave: () => void;
+  onClear: () => void;
+}
+
+export default function MemoryInput({ draftRef, onSave, onClear }: Props) {
+  return (
+    <div className="flex gap-2 mb-4">
+      <Input placeholder="Type a memory…" ref={draftRef} />
+      <Button onClick={onSave}>Save</Button>
+      <Button variant="secondary" onClick={onClear}>
+        Clear All
+      </Button>
+    </div>
+  );
+}
+```
+
+### `MemoryList`
+
+```tsx
+// components/features/memory/MemoryList.tsx
+import React from "react";
+import { Memory } from "@/components/containers/MemoryContainer";
+import { Card } from "@/components/ui";
+
+export default function MemoryList({ memories }: { memories: Memory[] }) {
+  if (!memories.length) return <p className="italic">No memories yet…</p>;
+
+  return (
+    <ul className="space-y-2">
+      {memories.map((m) => (
+        <Card as="li" key={m.id}>
+          <p className="font-medium">{m.content}</p>
+          <small className="text-xs text-gray-500">{m.createdAt}</small>
+        </Card>
+      ))}
+    </ul>
+  );
+}
+```
+
+---
+
+## 3 UI layer (atoms)
+
+Keep your existing primitives or something like:
+
+```tsx
+// components/ui/Button.tsx
+"use client";
+export default function Button({
+  children,
+  variant = "primary",
+  ...rest
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "primary" | "secondary";
+}) {
+  const base = "px-3 py-1 rounded";
+  const styles =
+    variant === "secondary"
+      ? "border border-gray-300"
+      : "bg-blue-600 text-white";
+  return (
+    <button className={`${base} ${styles}`} {...rest}>
+      {children}
+    </button>
+  );
+}
+```
+
+(similar pattern for `Input` and `Card`).
+
+---
+
+## 4 Pages
+
+```tsx
+// app/page.tsx
+export default function Home() {
+  return <h1>Hello World test</h1>;
+}
+```
+
+```tsx
+// app/dashboard/page.tsx
+import DashboardPage from "./DashboardPage";
+export default DashboardPage;
+```
+
+```tsx
+// app/dashboard/DashboardPage.tsx
+import MainLayout from "@/components/layouts/MainLayout";
+import MemoryContainer from "@/components/containers/MemoryContainer";
+
+export default function DashboardPage() {
+  return (
+    <MainLayout>
+      <MemoryContainer />
+    </MainLayout>
+  );
+}
+```
+
+---
+
+### Install deps
+
+```bash
+npm i uuid
+# or Bun / pnpm / yarn – your vibe, your call
+
+```
+
+> Heads-up 💡 If you’re on Node 18+, you can swap uuid() with crypto.randomUUID()—no package needed.
+
+---
+
+---
+
+## 🧠 Mini Exercise: **Component Memory Box**
+
+### 🎯 Goal
+
+สร้างแอปเล็กๆ ที่เป็น **Memory Box** ซึ่งให้ผู้ใช้:
+
+- พิมพ์ข้อความ
+- กด **Save** → ข้อความจะถูกเก็บเข้า list
+- กด **Clear** → ลบข้อความทั้งหมดใน list
+
+---
+
+### 🪜 Step-by-Step Challenge
+
+1. สร้างไฟล์ `/components/containers/MemoryContainer.tsx`
+2. สร้างฟังก์ชัน `MemoryContainer()` โดยใช้ `useState` เพื่อเก็บ memory list
+3. เพิ่ม child component ชื่อ `MemoryInput.tsx` (เป็น presentational component)
+4. ใช้ `useRef` เพื่อเก็บค่าข้อความที่ยังไม่ได้ submit
+5. มีปุ่ม **Save** และ **Clear**
+
+   - **Save** เรียก `saveMemory()`
+   - **Clear** ลบรายการทั้งหมด
+
+6. สร้าง type:
+
+   ```ts
+   type Memory = { id: string; content: string; timestamp: string };
+   ```
+
+7. แสดงผลใน `MemoryList.tsx` โดยรับ `props.memories`
+
+---
+
+### 🔄 The Flow
+
+#### ✅ Save Scenario
+
+- ผู้ใช้พิมพ์ข้อความใน input box
+- เมื่อกด **Save**:
+
+  - ข้อความจะถูกเพิ่มเข้า Memory Box
+  - ข้อความแต่ละอันจะมี:
+
+    - `id` ที่เป็น `uuid`
+    - `timestamp` ในรูปแบบ `yyyy/mm/dd : HH:MM:SS`
+
+#### 🧹 Clear All Scenario
+
+- เมื่อกด **Clear All**:
+
+  - ฟังก์ชันจะลบ memories ทั้งหมด
+
+---
+
+### 🖥️ Display
+
+#### `app/page.tsx`
+
+```tsx
+<h1>Hello World test</h1>
+```
+
+#### `app/dashboard/page.tsx`
+
+```tsx
+import DashboardPage from "@/components/pages/DashboardPage";
+
+export default function Dashboard() {
+  return <DashboardPage />;
+}
+```
+
+#### `components/pages/DashboardPage.tsx`
+
+```tsx
+import MainLayout from "@/components/layouts/MainLayout";
+import MemoryContainer from "@/components/containers/MemoryContainer";
+
+export default function DashboardPage() {
+  return (
+    <MainLayout>
+      <MemoryContainer />
+    </MainLayout>
+  );
+}
+```
+
+---
+
+### 🗂 Folder Structure
+
+```bash
+/app
+  page.tsx                      # “Hello World test”
+  /dashboard
+    page.tsx                    # → imports DashboardPage
+
+/components
+  /containers
+    MemoryContainer.tsx         # 🧠 holds state & logic
+  /features
+    /memory
+      MemoryInput.tsx           # form + buttons
+      MemoryList.tsx            # list renderer
+      index.ts                  # re-export (optional)
+  /pages
+    DashboardPage.tsx           # 📄 moved here from /dashboard
+  /ui
+    Button.tsx
+    Input.tsx
+    Card.tsx
+    index.ts
+
+/styles
+  globals.css
+  theme.ts
+```
+
+---
+
+พร้อมเริ่มโค้ดเมื่อไหร่ก็บอกได้เลยครับ Mos 💡
+อยากให้เริ่มเขียน `MemoryContainer.tsx` ก่อนมั้ย หรืออยากดูตัวอย่าง component input ก่อน?
+
+---
 
 ```
 
