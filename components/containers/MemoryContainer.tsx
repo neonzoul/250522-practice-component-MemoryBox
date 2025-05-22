@@ -1,30 +1,10 @@
-// MemoryContainer — 1️⃣ holds memory state 2️⃣ handles save/clear logic 3️⃣ passes props to MemoryInput & MemoryList
+//Container = glue code -> แค่ “ประกบ” hook → presentational เท่านั้น ไม่มี logic ปน
 "use client";
-
-import { useState, useRef } from "react";
-import { Memory } from "@/components/features/memory"; // import Memory type จาก memory index
-import { MemoryInput, MemoryList } from "@/components/features/memory"; // import MemoryInput & MemoryList จาก memory index
+import useMemory from "@/hooks/useMemory";
+import { MemoryInput, MemoryList } from "@/components/features/memory";
 
 export default function MemoryContainer() {
-  const [memories, setMemories] = useState<Memory[]>([]);
-  const draftRef = useRef<HTMLInputElement>(null);
-
-  const saveMemory = () => {
-    const content = draftRef.current?.value.trim();
-    if (!content) return;
-
-    const createdAt = new Date()
-      .toLocaleString("sv-SE", { hour12: false }) // yyyy-mm-dd HH:MM:SS
-      .replace(" ", " : ");
-
-    setMemories((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), content, createdAt },
-    ]);
-    if (draftRef.current) draftRef.current.value = "";
-  };
-
-  const clearAll = () => setMemories([]);
+  const { draftRef, memories, saveMemory, clearAll } = useMemory();
 
   return (
     <>
