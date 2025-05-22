@@ -2,6 +2,7 @@
 
 import { Memory } from "@/components/features/memory";
 import { Card } from "@/components/ui";
+import { humanFormat } from "@/utils/datetime";
 
 export default function MemoryList({ memories }: { memories: Memory[] }) {
   if (!memories.length) return <p className="italic">No memories yet…</p>;
@@ -11,7 +12,9 @@ export default function MemoryList({ memories }: { memories: Memory[] }) {
       {memories.map((m) => (
         <Card as="li" key={m.id}>
           <p className="font-medium">{m.content}</p>
-          <small className="text-xs text-gray-500">{m.createdAt}</small>
+          <small className="text-xs text-gray-500">
+            {humanFormat(m.createdAt)}
+          </small>
         </Card>
       ))}
     </ul>
